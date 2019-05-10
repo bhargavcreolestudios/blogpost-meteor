@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { withHistory } from 'react-router-dom';
+import { withHistory, Link } from 'react-router-dom';
 
 import MainContainer from './MainContainer.jsx';
 
@@ -44,7 +44,7 @@ export default class AppContainer extends Component {
         <nav className="navbar navbar-default navbar-static-top">
           <div className="container">
             <div className="navbar-header">
-              <a className="navbar-brand" href="#">Blog Post App</a>
+              <Link className="navbar-brand" to="/">Blog Post App</Link>
             </div>
             <div className="navbar-collapse">
               <ul className="nav navbar-nav navbar-right">

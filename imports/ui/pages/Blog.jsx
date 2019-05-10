@@ -2,26 +2,42 @@ import React, { Component } from 'react';
 import { withHistory, Link } from 'react-router-dom';
 import AppContainer from '../containers/AppContainer';
 import { Blogs } from '../../api/blogs';
-import { createContainer } from "meteor/react-meteor-data";
+import { withTracker } from "meteor/react-meteor-data";
 
 class Blog extends Component {
   state = {
-    blogs:[]
   }
 
   componentWillMount = ()=>{
-    console.log("log the props");
-    // console.log(this.props);
   }
 
-  componentDidUpdate(prevProps){
-    let {blogs} = this.props
-    if (blogs != prevProps.blogs) {
-      this.setState({blogs})
+  onViewClick = (id) =>{
+    if (id) {
+      this.props.history.push({
+        pathname: '/blog',
+        state: { id: id }
+      })
     }
   }
+  onDeleteClick = (id) =>{
+    if (id) {
+      Blogs.remove(id)
+    }
+  }
+
+  logout =(e) =>{
+    e.preventDefault();
+    Meteor.logout( (err) => {
+        if (err) {
+            console.log( err.reason );
+        } else {
+            this.props.history.push('/login');
+        }
+    });
+    this.props.history.push('/login');
+  }
   renderBlogs = () => {
-    const {blogs} = this.state
+    const {blogs} = this.props
     return blogs.map((blog,key) => (
       <div className="col-md-4" key={key}>
         <div className="panel-group">
@@ -29,7 +45,10 @@ class Blog extends Component {
             <div className="panel-heading">{blog.blogTitle}</div>
             <div className="panel-body">{blog.description}</div>
             <div className="panel-footer text-right">
-              <button className="btn btn-primary" onClick={ () => { this.props.history.push('blog/view/'+blog._id) } }> View Blog</button>
+              <div>
+                <button className="btn btn-danger pull-left" onClick={(e) =>{this.onDeleteClick(blog._id)}}> Delete Blog</button>
+                <button className="btn btn-primary" onClick={(e) =>{this.onViewClick(blog._id)}}> View Blog</button>
+              </div>
             </div>
           </div>
         </div>
@@ -38,31 +57,46 @@ class Blog extends Component {
   }
 
   render(){
+    const {currentUser} = this.props
     return (
-      <div>
-        
+      <div>        
         <nav className="navbar navbar-default navbar-static-top">
           <div className="container">
             <div className="navbar-header">
-              <a className="navbar-brand" href="#">Blog Post App</a>
+              <Link className="navbar-brand" to="/">Blog Post App</Link>
             </div>
             <div className="navbar-collapse">
               <ul className="nav navbar-nav navbar-right">
-                <li>
-                  <a href="#" onClick={this.logout}>Logout</a>
-                </li>
+                {currentUser ?<li>
+                                  <a href="#" onClick={this.logout}>Logout</a>
+                                </li> :
+                                <li>
+                                  <Link to="/login">Login</Link>
+                                </li> 
+                              }
               </ul>
             </div>
           </div>
         </nav>
+        <div>
+        <div className="text-right">
+        {currentUser && <Link className="btn btn-primary" to="/newBlog">Add new Blog</Link>}
+        </div>
         {this.renderBlogs()}
+        </div>
       </div>
     );
   }
 }
 
-export default createContainer(props => {
+export default withTracker(props => {
+  // Do all your reactive data access in this method.
+  // Note that this subscription will get cleaned up when your component is unmounted
+  const handle = Meteor.subscribe('Blogs');
+
   return {
-    blogs: Blogs.find({}).fetch()
+    currentUser: Meteor.user(),
+    listLoading: !handle.ready(),
+    blogs: Blogs.find({}).fetch(),
   };
-}, Blog);
+})(Blog);

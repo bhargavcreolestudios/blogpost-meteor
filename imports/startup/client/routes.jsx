@@ -11,17 +11,18 @@ import LoginPage from '../../ui/pages/LoginPage'
 import Blog from '../../ui/pages/Blog';
 import ViewBlog from '../../ui/pages/ViewBlog';
 import Users from '../../ui/pages/Users';
+import MainPage from '../../ui/pages/MainPage';
 
 
 export const renderRoutes = () => (
   <Router>
     <div>
-      <Route exact={true} path="/" component={AppContainer} />
-      <Route path="/login" component={LoginPage}/>
-      <Route path="/signup" component={SignupPage}/>
-      <Route path="/blog" component={Blog} />
-      <Route path="admin/users" component={Users} />
-      <Route path="/blog/view/:id" component={ViewBlog} />
+      <Route exact path="/newBlog" component={MainPage} />
+      <Route exact path="/login" component={LoginPage}/>
+      <Route exact path="/signup" component={SignupPage}/>
+      <Route exact path="/" component={Blog} />
+      <Route exact path="admin/users" component={Users} />
+      <Route exact path="/blog" component={ViewBlog} />
     </div>
   </Router>
 );

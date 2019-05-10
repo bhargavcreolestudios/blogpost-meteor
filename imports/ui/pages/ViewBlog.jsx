@@ -2,33 +2,62 @@ import React, { Component } from 'react';
 import { withHistory, Link } from 'react-router-dom';
 import AppContainer from '../containers/AppContainer';
 import { Blogs } from '../../api/blogs';
-import { createContainer } from "meteor/react-meteor-data";
+import { withTracker } from "meteor/react-meteor-data";
 
-export default class ViewBlog extends Component {
+class ViewBlog extends Component {
   constructor(props){
     super(props);
     this.state = {
-      id: this.props.match.params.id
+      id: null,
+      blog:{}
     }
   }
-  
+
+  componentWillMount(){
+    const {location} = this.props
+    if (!location.state || !location.state.id) {
+     this.props.history.goBack()
+    }
+  }
+  logout =(e) =>{
+    e.preventDefault();
+    Meteor.logout( (err) => {
+        if (err) {
+            console.log( err.reason );
+        } else {
+            this.props.history.push('/login');
+        }
+    });
+    this.props.history.push('/login');
+  }
+
+  onEditClick = (id) =>{
+    if (id) {
+      this.props.history.push({
+        pathname: '/newBlog',
+        state: { id: id }
+      })
+    }
+  }
 
   render(){
-    let data = Blogs.findOne({_id: this.state.id})
-    console.log(data)
+    const {blog, currentUser} = this.props
     return (
-      <div>
-        
+      <div>        
         <nav className="navbar navbar-default navbar-static-top">
           <div className="container">
             <div className="navbar-header">
-              <a className="navbar-brand" href="#">Blog Post App</a>
+              <Link className="navbar-brand" to="/">Blog Post App</Link>
             </div>
             <div className="navbar-collapse">
               <ul className="nav navbar-nav navbar-right">
-                <li>
-                  <a href="#" onClick={this.logout}>Logout</a>
-                </li>
+                {currentUser ?<li>
+                                  <a href="#" onClick={this.logout}>Logout</a>
+                                </li> :
+                                <li>
+                                  <Link to="/login">Login</Link>
+                                </li> 
+                              }
               </ul>
             </div>
           </div>
@@ -36,8 +65,9 @@ export default class ViewBlog extends Component {
         <div className="col-md-12">
         <div className="panel-group">
           <div className="panel panel-default">
-            <div className="panel-heading">{blogs.blogTitle}</div>
-            <div className="panel-body">{blogs.description}</div>
+            <div className="panel-heading">{blog.blogTitle}</div>
+            <div className="panel-body">{blog.description}</div>
+            {currentUser && <div className="panel-footer text-right"><button className="btn btn-primary" onClick={(e) =>{this.onEditClick(blog._id)}}> Edit Blog</button></div>}
           </div>
         </div>
       </div>
@@ -46,15 +76,12 @@ export default class ViewBlog extends Component {
   }
 }
 
-/*export default createContainer(props => {
-  const {match} = props
-  if (!match.params || !match.params.id) {
-    props.history.goBack()
-    return{
-      blogs:[]
-    }
-  }
+export default withTracker(props => {
+  const handle = Meteor.subscribe('Blogs');
+  const {location} = props
   return {
-    blogs: Blogs.findOne({_id: props.match.params.id})
+    currentUser: Meteor.user(),
+    listLoading: !handle.ready(),
+    blog: Blogs.findOne({_id: location.state.id}) || {}
   };
-}, ViewBlog);*/
+})(ViewBlog);

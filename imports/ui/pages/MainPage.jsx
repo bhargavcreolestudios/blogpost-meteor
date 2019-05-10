@@ -1,9 +1,10 @@
 import React, { Component } from 'react';
-import { BrowserRouter as Router, Route, Link } from 'react-router-dom';
-import PropTypes from 'prop-types';
+import { Link } from 'react-router-dom';
 import { Blogs } from '../../api/blogs';
+import { withTracker } from "meteor/react-meteor-data";
 
-export default class MainPage extends Component {
+
+class MainPage extends Component {
   constructor(props){
     super(props);
     this.state = {
@@ -11,7 +12,21 @@ export default class MainPage extends Component {
       formData: {},
       errors: {},
       enableEdit:false,
+      loaded:false
     };
+  }
+
+  componentDidMount(){
+    setTimeout(()=> {
+      this.setState({loaded:true})
+    }, 3000);
+  }
+  componentDidUpdate(prev){
+    if (this.props.blog != prev.blog) {
+      this.setState({
+        formData:this.props.blog
+      })
+    }
   }
   inputChanged = (event)=>{
     let {formData, errors} = this.state;
@@ -25,8 +40,9 @@ export default class MainPage extends Component {
   }
   handleSubmit = (event) => {
     event.preventDefault();
-    if(this.state.enableEdit){
-      let {formData} = this.state;
+    let {formData, errors} = this.state;
+    const {isEdit} = this.props
+    if(isEdit){
       Blogs.update({_id : formData._id},{
         $set:{
           blogTitle: formData.blogTitle,
@@ -34,14 +50,15 @@ export default class MainPage extends Component {
         }
       })
     }else{
-      let currentUser = this.props.currentUser;
-      let {formData, errors} = this.state;
+      let {currentUser} = this.props
       Blogs.insert({
         ...formData,
         createdBy: currentUser._id,
         createdAt: new Date(), // current time
       });
     }
+    formData= {}
+    this.setState({formData})
   }
   _onDeleteClick = (id) => {
     Blogs.remove(id)
@@ -58,38 +75,32 @@ export default class MainPage extends Component {
     this.setState({formData: editData, enableEdit:true})
   }
 
-  renderBlogs() {
-    let blogs = Blogs.find({}, { sort: { createdAt: -1 } }).fetch();
-    return blogs.map((blog,key) => (
-      <tr key={key}>
-        <td scope="row">{blog.blogTitle}</td>
-        <td>{blog.description}</td>
-        <td>
-          <button type="button" className="btn blue" onClick={(id)=>{this._onEditClick(blog._id)}}>Edit</button>
-        </td>
-        <td>
-          <button type="button" className="btn red" onClick={(id)=>{this._onDeleteClick(blog._id)}}>Remove</button>
-        </td>
-      </tr>
-    ));
+  logout =(e)=>{
+    e.preventDefault();
+    Meteor.logout( (err) => {
+        if (err) {
+            console.log( err.reason );
+        } else {
+            this.props.history.push('/login');
+        }
+    });
+    this.props.history.push('/login');
   }
 
-  render(){
-
+  renderComponent = () =>{
     let currentUser = this.props.currentUser;
     let userDataAvailable = (currentUser !== undefined);
     let loggedIn = (currentUser && userDataAvailable);
     const {formData, errors, enableEdit} = this.state;
-    return (
+    const {isEdit} = this.props
+    return(
       <div>
         <div className="container">
           <div className="row">
             <div className="col-md-4">
             </div>
             <div className="col-md-4">
-              <h1 className="text-center">{ loggedIn ? 'Welcome '+currentUser.username : '' }</h1>
-
-              <h3 className="text-center">Add Blog</h3>
+              <h3 className="text-center">{isEdit ? 'Edit' :'Add'} Blog</h3>
               { /*error.length > 0 ? <div className="alert alert-danger fade in">{error}</div> :''*/}
                 <form id="login-form" className="form col-md-12 center-block" onSubmit={this.handleSubmit.bind(this)}>
                   <div className="form-group">
@@ -115,44 +126,67 @@ export default class MainPage extends Component {
                     </textarea>
                   </div>
                   <div className="form-group">
-                    {
-                      enableEdit ? <input type="submit" id="login-button" className="btn btn-lg btn-primary btn-block" value="Update" /> : <input type="submit" id="login-button" className="btn btn-lg btn-primary btn-block" value="Add" /> 
-                    }
+                    <input type="submit" className="btn btn-lg btn-primary btn-block" value={isEdit ? 'Edit' :'Add'}/>
                   </div>
                 </form>
             </div>
             <div className="col-md-4">
-              <Link to="/blog">View All Blogs</Link>
-              <Link to="/admin/users" style={{ 'marginLeft': "30px" }}>View All Users</Link>
+              <Link to="/">View All Blogs</Link>
             </div>
           </div>
         </div>
+      </div>)
+  }
 
-        {  <div className="container">
-                  <div className="row">
-                    <div className="col-md-12">
-                      <table className="table table-hover">
-                        <thead>
-                          <tr>
-                            <th scope="col">Blog Title</th>
-                            <th scope="col">Blog Description</th>
-                            <th scope="col">Edit</th>
-                            <th scope="col">Delete</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                            {this.renderBlogs()}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>}
-
+  render(){
+    let currentUser = this.props.currentUser;
+    return (
+       <div>        
+        <nav className="navbar navbar-default navbar-static-top">
+          <div className="container">
+            <div className="navbar-header">
+              <Link className="navbar-brand" to="/">Blog Post App</Link>
+            </div>
+            <div className="navbar-collapse">
+              <ul className="nav navbar-nav navbar-right">
+                {currentUser ?<li>
+                                  <a href="#" onClick={this.logout}>Logout</a>
+                                </li> :
+                                <li>
+                                  <Link to="/login">Login</Link>
+                                </li> 
+                              }
+              </ul>
+            </div>
+          </div>
+        </nav>
+        {this.renderComponent()}
       </div>
     );
   }
 }
 
-MainPage.propTypes = {
-  username: PropTypes.string
-}
+// MainPage.propTypes = {
+//   username: PropTypes.string
+// }
+
+export default withTracker(props => {
+  const handle = Meteor.subscribe('Blogs');
+  console.log(handle.ready());
+  const {location} = props
+  if (location.state && location.state.id) {
+    return {
+      currentUser: Meteor.user(),
+      isEdit: true,
+      ready:handle.ready(),
+      blog: Blogs.findOne({_id: location.state.id}) || {}
+    };
+  }else{
+    return {
+    currentUser: Meteor.user(),
+    isEdit: false,
+    ready:handle.ready(),
+    blog: {}
+  };
+  }
+})(MainPage);

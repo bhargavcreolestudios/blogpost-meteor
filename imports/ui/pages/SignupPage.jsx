@@ -30,6 +30,7 @@ export default class SignupPage extends Component {
     let errors = this.isValid();
     if (_.isEmpty(errors)) {
       formData.createdAt =  new Date();
+      console.log(formData,'formDataformDataformDataformData');
       Accounts.createUser(formData, (err) => {
         if(err){
           this.setState({
